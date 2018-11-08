@@ -1,0 +1,1 @@
+Quick demo for retrieving heartbeats from the last seven days from a useer. In order to test, you need to have node.js installed and to run the demo on a local server. The local host url should be localhost:8080. You also need a fitbit account and device. 
