@@ -3,3 +3,5 @@ We are using MongoDB for a database. Because we will need to match tracks played
 {"_id": , "track_id": , "loudness": 0 , "tempo": 0, "tempo_confidence": 0}
 
 We will use the track ID (track_id) as a key. This has a string format. Tempo, loudness, and tempo confidence are floats.
+
+To see progress so far, see /databaseProgress.
