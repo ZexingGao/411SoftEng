@@ -43,6 +43,12 @@
         Some artist IDs include:
          4tZwfgrHOc3mvqYlEYSvVi
          0OdUWJ0sBjDrqHygGUXeCF
+        Next step will be to change the button below to something like "obtain-new-artist"
+        <a href="/login-fitbit" class="btn btn-primary">Log in with Fitbit</a>
+        <div id ="loggedin-fitbit">
+          <div id="fitbit-profile">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -66,10 +72,14 @@
       </div>
     </script>
 
+    <script id="fitbit-profile-template" type="text/x-handlebars-template">
+      <h1>Logged into Fitbit</h1>
+    </script>
+
     <script id="oauth-template" type="text/x-handlebars-template">
       <h2>oAuth info</h2>
       <dl class="dl-horizontal">
-        <dt>Access token</dt><dd class="text-overflow">{{access_token}}</dd>
+        <dt>Access token</dt><dd class="text-overflow">{{spotify_access_token}}</dd>
         <dt>Refresh token</dt><dd class="text-overflow">{{refresh_token}}</dd>
       </dl>
     </script>
@@ -94,15 +104,22 @@
           var hashParams = {};
           var e, r = /([^&;=]+)=?([^&;]*)/g,
               q = window.location.hash.substring(1);
+          //console.log("SUBSTRING: " + q);
           while ( e = r.exec(q)) {
              hashParams[e[1]] = decodeURIComponent(e[2]);
           }
+          console.log(hashParams);
           return hashParams;
         }
 
         var userProfileSource = document.getElementById('user-profile-template').innerHTML,
             userProfileTemplate = Handlebars.compile(userProfileSource),
             userProfilePlaceholder = document.getElementById('user-profile');
+
+        var fitbitProfileSource = document.getElementById('fitbit-profile-template').
+          innerHTML,
+            fitbitProfileTemplate = Handlebars.compile(fitbitProfileSource),
+            fitbitProfilePlaceholder = document.getElementById('fitbit-profile');
 
         var oauthSource = document.getElementById('oauth-template').innerHTML,
             oauthTemplate = Handlebars.compile(oauthSource),
@@ -114,19 +131,33 @@
 
         var params = getHashParams();
 
-        var access_token = params.access_token,
-            refresh_token = params.refresh_token,
+        var spotify_access_token = params.spotify_access_token,
+            refresh_token = params.spotify_refresh_token,
             error = params.error;
+
+        var fitbit_access_token = params.fitbit_access_token,
+            error = params.error;
+
+        if (spotify_access_token) {
+          console.log("TESTING TESTING " + spotify_access_token);
+        }
+        console.log("test");
+
+        //if (fitbit_access_token) {
+        //  console.log()
+        //}
 
         var testVal = '0OdUWJ0sBjDrqHygGUXeCF'
 
         if (error) {
           alert('There was an error during the authentication');
         } else {
-          if (access_token) {
+          //Everthing in this if is based on whether or not the spotify access code
+          //was returned in the URL as something valid.
+          if (spotify_access_token) {
             // render oauth info
             oauthPlaceholder.innerHTML = oauthTemplate({
-              access_token: access_token,
+              spotify_access_token: spotify_access_token,
               refresh_token: refresh_token
             });
 
@@ -137,7 +168,7 @@
             $.ajax({
                 url: 'https://api.spotify.com/v1/me',
                 headers: {
-                  'Authorization': 'Bearer ' + access_token
+                  'Authorization': 'Bearer ' + spotify_access_token
                 },
                 success: function(response) {
                   userProfilePlaceholder.innerHTML = userProfileTemplate(response);
@@ -159,9 +190,9 @@
                 'refresh_token': refresh_token
               }
             }).done(function(data) {
-              access_token = data.access_token;
+              spotify_access_token = data.spotify_access_token;
               oauthPlaceholder.innerHTML = oauthTemplate({
-                access_token: access_token,
+                spotify_access_token: spotify_access_token,
                 refresh_token: refresh_token
               });
             });
@@ -181,8 +212,8 @@
               url: '/refresh_artist',
               data: {
                 'refresh_token': refresh_token,
-                'access_token': access_token,
-                'test': testVal
+                'spotify_access_token': spotify_access_token,
+                'spotify_artist_id': testVal
               }
             }).done(function(data) {
               name = data.name;
@@ -192,29 +223,21 @@
             });
           }, false);
 
-          /*
-          document.getElementById('testing-testing').addEventListener('click', function() {
-            //data: [myVar = {id: 4, email: 'emailaddress', myArray: [1, 2, 3]}];
-            //Do this then parse my var out.
-            //See https://stackoverflow.com/questions/15576548/how-to-pass-parameters-in-get-requests-with-jquery
+          /*document.getElementById('obtain-profile').addEventListener('click', function() {
             $.ajax({
-              async: false,
-              url: '/testing_testing',
+              url: '/refresh_artist',
               data: {
                 'refresh_token': refresh_token,
+                'access_token': access_token,
                 'test': testVal
               }
             }).done(function(data) {
-              access_token = data.access_token;
-              oauthPlaceholder.innerHTML = oauthTemplate({
-                access_token: access_token,
-                refresh_token: refresh_token
-              });
+              name = data.name;
               artistPlaceholder.innerHTML = artistTemplate({
                 name: name
               });
             });
-          }, false);*/
+          }, false);) */
         }
       })();
     </script>
