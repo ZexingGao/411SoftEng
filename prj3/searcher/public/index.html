@@ -45,15 +45,14 @@
          0OdUWJ0sBjDrqHygGUXeCF
         Next step will be to change the button below to something like "obtain-new-artist"
         <a href="/login-fitbit" class="btn btn-primary">Log in with Fitbit</a>
-        <div id ="loggedin-fitbit">
-          <div id="fitbit-profile">
-          </div>
+        <button class="btn btn-default" id="obtain-heartrate">Search Heartrate</button>
+        <div id ="fitbit-profile">
         </div>
       </div>
     </div>
 
     <script id="user-profile-template" type="text/x-handlebars-template">
-      <h1>Logged in as {{display_name}}</h1>
+      <h2>Logged in as {{display_name}}</h2>
       <div class="media">
         <div class="pull-left">
           <img class="media-object" width="150" src="{{images.0.url}}" />
@@ -73,7 +72,7 @@
     </script>
 
     <script id="fitbit-profile-template" type="text/x-handlebars-template">
-      <h1>Logged into Fitbit</h1>
+      <h3>Logged in as {{fullName}}</h3>
     </script>
 
     <script id="oauth-template" type="text/x-handlebars-template">
@@ -108,10 +107,12 @@
           while ( e = r.exec(q)) {
              hashParams[e[1]] = decodeURIComponent(e[2]);
           }
-          console.log(hashParams);
+          //Each hashParam is an item from the URL.
+          //console.log(hashParams);
           return hashParams;
         }
 
+        //These tie HTML divs to data collected in JSON form via Javascript.
         var userProfileSource = document.getElementById('user-profile-template').innerHTML,
             userProfileTemplate = Handlebars.compile(userProfileSource),
             userProfilePlaceholder = document.getElementById('user-profile');
@@ -129,6 +130,7 @@
             artistTemplate = Handlebars.compile(artistSource),
             artistPlaceholder = document.getElementById('artist');
 
+        //Takes data from the parameters in the URL and stores them in global variables.
         var params = getHashParams();
 
         var spotify_access_token = params.spotify_access_token,
@@ -138,15 +140,7 @@
         var fitbit_access_token = params.fitbit_access_token,
             error = params.error;
 
-        if (spotify_access_token) {
-          console.log("TESTING TESTING " + spotify_access_token);
-        }
-        console.log("test");
-
-        //if (fitbit_access_token) {
-        //  console.log()
-        //}
-
+        //Other global variables.
         var testVal = '0OdUWJ0sBjDrqHygGUXeCF'
 
         if (error) {
@@ -155,7 +149,7 @@
           //Everthing in this if is based on whether or not the spotify access code
           //was returned in the URL as something valid.
           if (spotify_access_token) {
-            // render oauth info
+            //Rendering placeholder information.
             oauthPlaceholder.innerHTML = oauthTemplate({
               spotify_access_token: spotify_access_token,
               refresh_token: refresh_token
@@ -165,6 +159,7 @@
               name: 'test',
             });
 
+            //This call updates the Spotify profile information after a redirect occurs.
             $.ajax({
                 url: 'https://api.spotify.com/v1/me',
                 headers: {
@@ -172,17 +167,34 @@
                 },
                 success: function(response) {
                   userProfilePlaceholder.innerHTML = userProfileTemplate(response);
-
+                  console.log(response);
                   $('#login').hide();
                   $('#loggedin').show();
                 }
             });
+
+            //This call updates the Fitbit profile information after a redirect occurs.
+            if (fitbit_access_token) {
+              $.ajax({
+                url: 'https://api.fitbit.com/1/user/-/profile.json',
+                headers: {
+                  'Authorization': 'Bearer ' + fitbit_access_token
+                },
+                success: function(response) {
+                  //To add more information to be displayed, check out the log in the browser to find out what fields are in the JSON data.
+                  console.log(response['user']);
+                  fitbitProfilePlaceholder.innerHTML = fitbitProfileTemplate(response['user']);
+                }
+              });
+            }
+
           } else {
-              // render initial screen
+              // Because there is no Spotify access token, return to the initial screen.
               $('#login').show();
               $('#loggedin').hide();
           }
 
+          //Now we list our functions to the backend.
           document.getElementById('obtain-new-token').addEventListener('click', function() {
             $.ajax({
               url: '/refresh_token',
@@ -198,6 +210,7 @@
             });
           }, false);
 
+          //This updates the data stored in testVal with that inputted via "form".
           $( "form" ).submit(function( event ) {
 
             testVal = $( "input:first" ).val();
@@ -208,6 +221,7 @@
           });
 
           document.getElementById('obtain-new-artist').addEventListener('click', function() {
+            console.log("function called");
             $.ajax({
               url: '/refresh_artist',
               data: {
@@ -223,21 +237,40 @@
             });
           }, false);
 
-          /*document.getElementById('obtain-profile').addEventListener('click', function() {
-            $.ajax({
-              url: '/refresh_artist',
-              data: {
-                'refresh_token': refresh_token,
-                'access_token': access_token,
-                'test': testVal
-              }
-            }).done(function(data) {
-              name = data.name;
+          //These functions are dependent on having logged into Fitbit.
+          if (fitbit_access_token) {
+
+            document.getElementById('obtain-heartrate').addEventListener('click', function() {
+              console.log("function called");
+              $.ajax({
+                url: '/refresh_heartrate',
+                data: {
+                  'heartrateDate': 'today'
+                }
+              }).done(function(data) {
+                //Should only add data to the database if it was not drawn from there.
+                if (data.inDatabase == 0) {
+                  $.ajax({
+                    url: '/testing',
+                    data2: {
+                      'heartrateDate': 'today'
+                    }
+                  }).done(function(data2){
+                    console.log("testing done");
+                  });
+                } else {
+                  //Remember, this is going to appear in the browser's log
+                  console.log("Data retrieved from database, so no add required.")
+                }
+              /*name = data.name;
               artistPlaceholder.innerHTML = artistTemplate({
                 name: name
+              });*/
               });
-            });
-          }, false);) */
+            }, false);
+
+          }
+
         }
       })();
     </script>

@@ -6,6 +6,9 @@ var cookieParser = require('cookie-parser');
 var session = require('express-session');
 var FitbitApiClient = require("fitbit-node");
 
+var mongoClient = require('mongodb').MongoClient;
+var mongoURL = "mongodb://localhost:27017/";
+
 //Spotify sensitive information
 var spotify_client_id = process.env['CLIENT_ID'];
 var spotify_client_secret = process.env['CLIENT_SECRET'];
@@ -17,6 +20,7 @@ var fitbit_client_secret = process.env['FITBIT_CLIENT_SECRET'];
 //Shared information
 var redirect_uri = process.env['REDIRECT_URI'];
 
+//We need to store these for the URL after we redirect.
 var spotify_access_token = null;
 var spotify_refresh_token = null;
 var fitbit_access_token = null;
@@ -124,6 +128,7 @@ app.get('/callback', function(req, res) {
           spotify_access_token = body.access_token;
           spotify_refresh_token = body.refresh_token;
 
+          //Displays the authorization code in the terminal.
           /*
           var options = {
             url: 'https://api.spotify.com/v1/me',
@@ -136,7 +141,8 @@ app.get('/callback', function(req, res) {
             console.log(body);
           });*/
 
-          // we can also pass the token to the browser to make requests from there
+          // We can also pass the token to the browser to make requests from there. (I.e. place the token in the URL.)
+          // Notice, we won't have the Fitbit access token at this point. Only two variables should be included in the URL.
           res.redirect('/#' +
             querystring.stringify({
               spotify_access_token: spotify_access_token,
@@ -156,6 +162,19 @@ app.get('/callback', function(req, res) {
 
       fitbit_access_token = result.access_token;
 
+      /*
+      //The format of this is going to be a single item in a list followed by 'IncomingMessage.' Hence we get the first item.
+      client.get("/profile.json", result.access_token).then(results => {
+        console.log(results[0]);
+        res.send(results[0]);
+        //console.log(results[0]['user']['age']);
+      }).catch(err => {
+        res.status(err.status).send(err);
+      }); //Catch for the profile get.
+      */
+
+
+      //Notice now we have the fitbit_access token. This is going to redirect us with these variables in the URL.
       res.redirect('/#' +
           querystring.stringify({
               spotify_access_token: spotify_access_token,
@@ -163,15 +182,13 @@ app.get('/callback', function(req, res) {
               fitbit_access_token: fitbit_access_token
       }));
 
-      /*
+      //The format of this is going to be a single item in a list followed by 'IncomingMessage.' Hence we get the first item.
       client.get('/activities/heart/date/today/1d.json', result.access_token).then(results => {
-        res.redirect('/#' +
-          querystring.stringify({
-              fitbit_access_token: result.access_token
-          }));
-        });
-      });*/
-    })
+        console.log(results[0]);
+      });
+    }).catch(err => {
+      res.status(err.status).send(err);
+    }); // Catch for the accessToken.
   }
 });
 
@@ -252,6 +269,105 @@ app.get('/refresh_artist', function(req, res) {
       });
     }
   });
+});
+
+function queryDatabase(req) {
+  return new Promise(resolve => {
+
+    if (req == "/refresh_heartrate?heartrateDate=today") {
+      console.log(req);
+      mongoClient.connect(mongoURL, { useNewUrlParser: true }, function(err, db) {
+        if (err) throw err;
+        var dbo = db.db("database");
+        //Right now this is just querying for some random key, but this can be changed later.
+        //To test adding a new, unique data item, query for something different than what we know
+        //exists... like "[track_id]test"
+        var testInstance = { track_id: "[track_id]" };
+        dbo.collection("analysis").find(testInstance).toArray(function(err, result) {
+          if (err) throw err;
+          db.close();
+          //Resolve ends the promise, acting like a return.
+          resolve(result);
+        });
+      });
+    } else {
+      console.log("test");
+    }
+
+  });
+}
+
+function insertDatabase(req, results) {
+
+  return new Promise(resolve => {
+
+    if (req == "/refresh_heartrate?heartrateDate=today") {
+      MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
+        if (err) throw err;
+        var dbo = db.db("database");
+        var testInstance = { track_id: "[track_id]", loudness: 0.0, tempo: 0.0, tempo_confidence: 0.0};
+        dbo.collection("analysis").insertOne(testInstance, function(err, res) {
+          if (err) throw err;
+          console.log("Analysis inserted.");
+          db.close();
+          result("DONE");
+        });
+      });
+    }
+  });
+
+}
+
+app.get('/refresh_heartrate', async function(req, res) {
+  //Notice, this function ulitizes the database, so we use async.
+
+  //Obtains the URL to identify the parameters being used in the database.
+  urlQuery = req['socket']['parser']['incoming']['originalUrl'];
+
+  //Queries the database to see if appropriate data currently resides there.
+  //This must be synchronized, hence the await.
+  var databaseResult = await queryDatabase(urlQuery);
+  console.log(databaseResult);
+
+  var heartrateDate = req.query.heartrateDate;
+
+  //If the result from the database was 0, then the item was not in the database. Perform an API request.
+  if (databaseResult.length == 0) {
+    //The format of this is going to be a single item in a list followed by 'IncomingMessage.' Hence we get the first item.
+    client.get('/activities/heart/date/' + heartrateDate + '/1d.json', fitbit_access_token).then(results => {
+      //var testing = insertDatabase(urlQuery, results);
+      //console.log(results[0]);
+      //console.log(results[0]['activities-heart'][0]['value']);
+      results[0]['inDatabase'] = 0;
+      console.log("DATABASE RESULT:", results[0]);
+      res.send(results[0]);
+    }).catch(err => {
+      res.status(err.status).send(err);
+    }); //Catch for the get.
+  } else {
+    //Else, the information is in the database. Send the result back to the front end.
+    console.log("Exists in database already.");
+    databaseResult['inDatabase'] = 1;
+    console.log("DATABASE RESULT:", databaseResult);
+    res.send(databaseResult);
+  }
+  
+});
+
+app.get('/testing', function(req, res) {
+
+  mongoClient.connect(mongoURL, { useNewUrlParser: true }, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("database");
+    var testInstance = { track_id: "[track_id]", loudness: 0.0, tempo: 0.0, tempo_confidence: 0.0};
+    dbo.collection("analysis").insertOne(testInstance, function(err, res) {
+      if (err) throw err;
+      console.log("Analysis inserted.");
+      db.close();
+    });
+  });
+
+  res.send(true);
 });
 
 console.log('Listening on 8888');
