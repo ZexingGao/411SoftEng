@@ -140,8 +140,24 @@
         var fitbit_access_token = params.fitbit_access_token,
             error = params.error;
 
+        var today  = new Date();
+        if (today.getDate() < 10 && (today.getMonth() + 1) < 10) {
+          //Both the month and day require a 0 infront.
+          today = today.getFullYear() + '-0' + (today.getMonth() + 1) + '-0' + today.getDate();
+        } else if (today.getDate() < 10 && (today.getMonth() + 1) > 10) {
+          //Just the day requires a 0 infront.
+          today = today.getFullYear() + '-' + (today.getMonth() + 1) + '-0' + today.getDate();
+        } else if (today.getDate() > 10 && (today.getMonth() + 1) < 10) {
+          //Just the month requires a 0 infront.
+          today = today.getFullYear() + '-0' + (today.getMonth() + 1) + '-' + today.getDate();
+        } else if (today.getDate() > 10 && (today.getMonth() + 1) > 10) {
+          //Neither the day nor the month requires a 0 infront.
+          today = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+        }
+        console.log ("TESTING DATE", today);
+
         //Other global variables.
-        var testVal = '0OdUWJ0sBjDrqHygGUXeCF'
+        var testVal = '0OdUWJ0sBjDrqHygGUXeCF';
 
         if (error) {
           alert('There was an error during the authentication');
@@ -245,17 +261,20 @@
               $.ajax({
                 url: '/refresh_heartrate',
                 data: {
-                  'heartrateDate': 'today'
+                  'dateTime': today
                 }
               }).done(function(data) {
                 //Should only add data to the database if it was not drawn from there.
                 if (data.inDatabase == 0) {
+                  //console.log("DATA RECEIVED: ", data["activities-heart"][0].value);
                   $.ajax({
-                    url: '/testing',
-                    data2: {
-                      'heartrateDate': 'today'
+                    //Maybe the input to this inner function (data2) could be based on the output from the outer function (data) in order to replace 'today' with the proper date.
+                    url: '/add-to-db',
+                    data: {
+                      'dateTime': data["activities-heart"][0].dateTime,
+                      'value': data["activities-heart"][0].value
                     }
-                  }).done(function(data2){
+                  }).done(function(data){
                     console.log("testing done");
                   });
                 } else {

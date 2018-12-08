@@ -31,6 +31,21 @@ var client = new FitbitApiClient({
   apiVersion: '1.2'
 })
 
+var today  = new Date();
+if (today.getDate() < 10 && (today.getMonth() + 1) < 10) {
+  //Both the month and day require a 0 infront.
+  today = today.getFullYear() + '-0' + (today.getMonth() + 1) + '-0' + today.getDate();
+} else if (today.getDate() < 10 && (today.getMonth() + 1) > 10) {
+  //Just the day requires a 0 infront.
+  today = today.getFullYear() + '-' + (today.getMonth() + 1) + '-0' + today.getDate();
+} else if (today.getDate() > 10 && (today.getMonth() + 1) < 10) {
+  //Just the month requires a 0 infront.
+  today = today.getFullYear() + '-0' + (today.getMonth() + 1) + '-' + today.getDate();
+} else if (today.getDate() > 10 && (today.getMonth() + 1) > 10) {
+  //Neither the day nor the month requires a 0 infront.
+  today = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+}
+
 /**
  * Generates a random string containing numbers and letters
  * @param  {number} length The length of the string
@@ -273,8 +288,9 @@ app.get('/refresh_artist', function(req, res) {
 
 function queryDatabase(req) {
   return new Promise(resolve => {
+    console.log("TODAY: ", today);
 
-    if (req == "/refresh_heartrate?heartrateDate=today") {
+    if (req == "/refresh_heartrate?dateTime=" + today) {
       console.log(req);
       mongoClient.connect(mongoURL, { useNewUrlParser: true }, function(err, db) {
         if (err) throw err;
@@ -282,7 +298,9 @@ function queryDatabase(req) {
         //Right now this is just querying for some random key, but this can be changed later.
         //To test adding a new, unique data item, query for something different than what we know
         //exists... like "[track_id]test"
-        var testInstance = { track_id: "[track_id]" };
+        //var testInstance = { track_id: "[track_id]" };
+        var testInstance = { dateTime: today };
+        console.log("testInstance", testInstance);
         dbo.collection("analysis").find(testInstance).toArray(function(err, result) {
           if (err) throw err;
           db.close();
@@ -297,27 +315,6 @@ function queryDatabase(req) {
   });
 }
 
-function insertDatabase(req, results) {
-
-  return new Promise(resolve => {
-
-    if (req == "/refresh_heartrate?heartrateDate=today") {
-      MongoClient.connect(url, { useNewUrlParser: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("database");
-        var testInstance = { track_id: "[track_id]", loudness: 0.0, tempo: 0.0, tempo_confidence: 0.0};
-        dbo.collection("analysis").insertOne(testInstance, function(err, res) {
-          if (err) throw err;
-          console.log("Analysis inserted.");
-          db.close();
-          result("DONE");
-        });
-      });
-    }
-  });
-
-}
-
 app.get('/refresh_heartrate', async function(req, res) {
   //Notice, this function ulitizes the database, so we use async.
 
@@ -329,12 +326,10 @@ app.get('/refresh_heartrate', async function(req, res) {
   var databaseResult = await queryDatabase(urlQuery);
   console.log(databaseResult);
 
-  var heartrateDate = req.query.heartrateDate;
-
   //If the result from the database was 0, then the item was not in the database. Perform an API request.
   if (databaseResult.length == 0) {
     //The format of this is going to be a single item in a list followed by 'IncomingMessage.' Hence we get the first item.
-    client.get('/activities/heart/date/' + heartrateDate + '/1d.json', fitbit_access_token).then(results => {
+    client.get('/activities/heart/date/' + today + '/1d.json', fitbit_access_token).then(results => {
       //var testing = insertDatabase(urlQuery, results);
       //console.log(results[0]);
       //console.log(results[0]['activities-heart'][0]['value']);
@@ -354,13 +349,14 @@ app.get('/refresh_heartrate', async function(req, res) {
   
 });
 
-app.get('/testing', function(req, res) {
+app.get('/add-to-db', function(req, res) {
+
+  //Inserts a query specified in the front-end function call by req.query into database.
 
   mongoClient.connect(mongoURL, { useNewUrlParser: true }, function(err, db) {
     if (err) throw err;
     var dbo = db.db("database");
-    var testInstance = { track_id: "[track_id]", loudness: 0.0, tempo: 0.0, tempo_confidence: 0.0};
-    dbo.collection("analysis").insertOne(testInstance, function(err, res) {
+    dbo.collection("analysis").insertOne(req.query, function(err, res) {
       if (err) throw err;
       console.log("Analysis inserted.");
       db.close();
