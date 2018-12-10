@@ -3,6 +3,8 @@
   <head>
     <title>Spotify Searcher</title>
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+      <script src = "recommendMusic.js"></script>
+
     <style type="text/css">
       #login, #loggedin {
         display: none;
@@ -38,6 +40,17 @@
           <input type="text" id="myInput" value="0OdUWJ0sBjDrqHygGUXeCF">
         </form>
         <button class="btn btn-default" id="obtain-new-artist">Search</button>
+
+          <div id = "recommendMusicContainer">
+              <h2>Same Vibe, Different Tempo</h2>
+              <h4>Give us a playlist ID and we'll map that to a given heartrate and give you new music while we're at it!</h4>
+              <form>
+                <input type ="text" id = "playlist-ID" value = "7JQemEoJquN5WRvRbOJEYK">
+                <input type ="text" id = "tempo" value = "120">
+              </form>
+              <button  class="btn btn-default" id="recommend-music-btn" onclick="recommendMusic()">Find New Music</button>
+              <p id = "recommend-music-results"></p>
+          </div>
         <h2>How to Use</h2>
         Input an artist ID into the textbox, hit enter <b>(don't forget this step!)</b>, and then retrieve the artist's name with the Search button.
         Some artist IDs include:
@@ -80,6 +93,7 @@
         <dt>Artist name</dt><dd class="text-overflow">{{name}}</dd>
       </dl>
     </script>
+
 
     <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
@@ -130,6 +144,7 @@
               refresh_token: refresh_token
             });
 
+            setTokens(access_token, refresh_token);
             artistPlaceholder.innerHTML = artistTemplate({
               name: 'test',
             });
@@ -164,6 +179,7 @@
                 access_token: access_token,
                 refresh_token: refresh_token
               });
+                setTokens(access_token, refresh_token);
             });
           }, false);
 

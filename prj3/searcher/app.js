@@ -37,7 +37,7 @@ app.get('/login', function(req, res) {
   res.cookie(stateKey, state);
 
   // your application requests authorization
-  var scope = 'user-read-private user-read-email';
+  var scope = 'user-read-private user-read-email user-top-read playlist-read-private playlist-read-collaborative';
   res.redirect('https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
@@ -135,13 +135,14 @@ app.get('/refresh_token', function(req, res) {
 });
 
 app.get('/refresh_artist', function(req, res) {
-
+        console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
   // requesting access token from refresh token
   var input = req.query.test;
   var access_token = req.query.access_token;
 
-  console.log(input);
-  console.log(access_token);
+  // console.log(input);
+  // console.log(access_token);
+    var scope = 'user-read-private user-read-email';
 
   var authOptions = {
     url: 'https://api.spotify.com/v1/artists/' + req.query.test,
@@ -150,9 +151,10 @@ app.get('/refresh_artist', function(req, res) {
   };
 
   request.get(authOptions, function(error, response, body) {
-    console.log(response);
-    console.log(body);
-    console.log(body.name);
+    // console.log(response);
+    // console.log(body);
+    // console.log(body.name);
+      console.log("************************")
     if (!error && response.statusCode === 200) {
       var name = body.name;
       res.send({
@@ -160,6 +162,147 @@ app.get('/refresh_artist', function(req, res) {
       });
     }
   });
+});
+//
+
+app.get('/get_artists', function(req, res) {
+    var access_token = req.query.access_token;
+    var authOptions = {
+        url: 'https://api.spotify.com/v1/playlists/'+ req.query.playlist_ID + '/tracks',
+        headers: { 'Authorization': 'Bearer ' + access_token },
+        json: true
+    };
+
+    request.get(authOptions, function(error, response, body) {
+        console.log(body);
+        if (!error && response.statusCode === 200) {
+            let artistIDs= [];
+            let items = body.items ;
+            for (let i =0; i < items.length; i++){
+                artistIDs.push(items[i].track.artists[0].id);
+            }
+            let filteredArray = artistIDs.filter(function(item, pos) {
+                return artistIDs.indexOf(item) === pos; //removes duplicates
+            });
+            res.send(filteredArray);
+        }
+    });
+});
+
+app.get('/get_related_artists', function(req, res) {
+    var access_token = req.query.access_token;
+
+    let relatedArtists = [];
+    let finished =0;
+    for (let i = 0; i < req.query.artists.length; i++){
+        var authOptions = {
+            url: 'https://api.spotify.com/v1/artists/'+ req.query.artists[i]+ '/related-artists',
+            headers: { 'Authorization': 'Bearer ' + access_token },
+            json: true
+        };
+        request.get(authOptions, function(error, response, body) {
+            let recommendedArtists = body.artists;
+            if (!error && response.statusCode === 200) {
+                for (let j =0; j < Math.min(4, recommendedArtists.length); j++){
+                    relatedArtists.push([recommendedArtists[j].id, recommendedArtists[j].name])
+                }
+                finished +=1
+            }
+        });
+    }//
+    function waitUntilFinished() {
+        if(finished < req.query.artists.length) {
+            setTimeout(waitUntilFinished, 100);
+        } else {
+            let filteredArray = relatedArtists.filter(function(item, pos) {
+                return relatedArtists.indexOf(item) === pos; //removes duplicates
+            });
+            res.send(filteredArray)
+        }
+    }
+    waitUntilFinished();
+});
+
+app.get('/get_recommended_songs', function(req, res) {
+    var access_token = req.query.access_token;
+
+    let recommendedSongs = [];
+    let finished =0;
+    for (let i = 0; i < req.query.relatedArtists.length; i++){
+        let currentArtist = req.query.relatedArtists[i];
+        var authOptions = {
+            url: 'https://api.spotify.com/v1/artists/'+ currentArtist[0]+ '/top-tracks?market=US',
+            headers: { 'Authorization': 'Bearer ' + access_token },
+            json: true
+        };
+        request.get(authOptions, function(error, response, body) {
+            let tracks = body.tracks;
+            if (!error && response.statusCode === 200) {
+                for (let j =0; j < Math.min(4, tracks.length); j++){
+                    let currID = tracks[j].id;
+                    let trackName = tracks[j].name;
+                    let obj = {};
+                    // console.log("artists name ", currentArtist[1])
+                    obj[currID] = [currentArtist[1], trackName];
+                    recommendedSongs.push(obj)
+                }
+                finished +=1
+            }
+        });
+    }
+
+    function waitUntilFinished() {
+        if(finished < req.query.relatedArtists.length) {
+            setTimeout(waitUntilFinished, 100);
+        } else {
+            let filteredArray = recommendedSongs.filter(function(item, pos) {
+                return recommendedSongs.indexOf(item) === pos; //removes duplicates
+            });
+            res.send(filteredArray)
+        }
+    }
+    waitUntilFinished();
+});
+
+app.get('/perform_song_analysis', function(req, res) {
+    var access_token = req.query.access_token;
+
+    let result = [];
+    let finished =0;
+    let songObjectsList = Object.entries(req.query.recommendedSongs);
+    for (let i = 0; i < songObjectsList.length; i++){
+        let currentSongObject = songObjectsList[i][1];
+        let key = Object.keys(currentSongObject)[0]; //holds the song id
+        var authOptions = {
+            url: 'https://api.spotify.com/v1/audio-features/'+ key,
+            headers: { 'Authorization': 'Bearer ' + access_token },
+            json: true
+        };//
+        request.get(authOptions, function(error, response, body) {
+            let tempo = body.tempo;
+            if (!error && response.statusCode === 200) {
+                if (parseInt(req.query.tempo) - 10 >=  tempo <= parseInt(req.query.tempo) + 10){
+                    result.push(currentSongObject)
+                }
+                finished +=1
+            }
+        });
+    }
+
+    function waitUntilFinished() {
+        if(finished < songObjectsList.length) {
+            setTimeout(waitUntilFinished, 100);
+        } else {
+            let resultingString = "<h4>Your New Playlist!<\/h4>";
+            for (let i =0; i < result.length; i ++){
+                let songObj = result[i];
+                let currKey = Object.keys(songObj)[0];
+                resultingString += "<p>"+ songObj[currKey][1] + " by " + songObj[currKey][0] + "<\/p>"
+            }
+            res.send(resultingString)
+        }
+    }
+    waitUntilFinished();
 });
 
 app.get('/testing_testing', function(req, res) {
