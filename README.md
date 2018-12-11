@@ -19,6 +19,8 @@ Idea: It is often hard to create workout playlists that suit your individual wor
 ![Image](https://github.com/ZexingGao/411SoftEng/blob/master/docs/Picture10.png)
 7. Save the OAuth 2.0 Client ID and Client Secret, you will need it later. 
 8. Download node.js on your laptop. https://nodejs.org/en/download/
-9. Open your console and go directory cd ../411SoftEng\prj3\searcher. If there are anything package missing, try "npm install xxx". Install all necessary packages by inputting following command: npm install, npm install express, npm install express-session, npm install mongo, etc. 
+9. Open your console and go directory cd ..411SoftEng\prj3\searcher. If there are anything package missing, try "npm install xxx". Install all necessary packages by inputting following command: npm install, npm install express, npm install express-session, npm install mongo, etc. 
 10. If you see "Listening on 8888", then you finished your setup and ready to go. Go to your browser and type localhost:8888 to access our application. 
 ![Image](https://github.com/ZexingGao/411SoftEng/blob/master/docs/Picture11.png)
+
+# How to use our app
