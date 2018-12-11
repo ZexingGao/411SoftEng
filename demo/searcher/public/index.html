@@ -1,0 +1,405 @@
+<!doctype html>
+<html>
+  <head>
+    <title>HeartBeats</title>
+    <link rel="stylesheet" type="text/css" href="index.css">
+    <link href="https://fonts.googleapis.com/css?family=Courgette|Lobster|Questrial" rel="stylesheet">
+    <!--
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"> 
+  -->
+  </head>
+
+  <body>
+    <div class="container">
+      <div id="login">
+        <video autoplay muted loop id="myVideo">
+          <source src="Matkot.mp4" type="video/mp4">
+          <source src="Matkot.webm" type="video/webm">
+        </video>
+        <br>
+        <br>
+        <br>
+        <br>
+        <h1 id="login-title">HeartBeats</h1>
+        <h3 id="login-title2">Listen to what your heart truly wants</h3>
+        <br>
+        <a id="Spotify" href="/login" class="btn btn-primary">Log in with Spotify</a>
+      </div>
+      <div id="loggedin">
+        <div id="user-profile">
+        </div>
+        <!--
+        <div id="oauth">
+        </div>
+        -->
+
+        <!--
+        <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
+
+      -->
+        <!--
+        <form>
+          <input type="text" id="myInput" value="0OdUWJ0sBjDrqHygGUXeCF">
+        </form>
+        <button class="btn btn-default" id="obtain-new-artist">Search</button>
+      -->
+        <a href="/login-fitbit" class="fitbit-login">0. Log in with Fitbit</a>
+        <button class="other-button" id="obtain-heartrate">1. Search Heartrate</button>
+        <button class="other-button" id="obtain-recent-tracks">2. Search Recent Tracks</button>
+        <button class="other-button" id="obtain-song-tempo">3. Search Tempo</button>
+        <button class="other-button" id="form-list">4. Form List</button>
+        <div id ="fitbit-profile">
+        </div>
+        <div id="final-list">
+        </div>
+      </div>
+    </div>
+
+    <script id="user-profile-template" type="text/x-handlebars-template">
+      <h1 id="title">HeartBeats</h1>
+      <h2 id="subtitle">Welcome to HeatBeats, {{display_name}}</h2>
+      <div class="guide">
+      To get started, log into your Fitbit account and retrieve your heartrate.
+      </div>
+      <br>
+    </script>
+
+    <script id="fitbit-profile-template" type="text/x-handlebars-template">
+      <h3>Logged into Fitbit as user {{fullName}}</h3>
+    </script>
+
+    <script id="final-list-template" type="text/x-handlebars-template">
+    <div class="guide">Song List</div>
+    <div class="scroll-list">
+      {{finalList}}
+    </div>
+    </script>
+
+
+
+    <script id="oauth-template" type="text/x-handlebars-template">
+    /*
+      <h2>oAuth info</h2>
+      <dl class="dl-horizontal">
+        <dt>Access token</dt><dd class="text-overflow">{{spotify_access_token}}</dd>
+        <dt>Refresh token</dt><dd class="text-overflow">{{refresh_token}}</dd>
+      </dl>
+    */
+    </script>
+
+    <script id="artist-template" type="text/x-handlebars-template">
+      /*
+      <h2>Search Results</h2>
+      <dl class="dl-horizontal">
+        <dt>Artist name</dt><dd class="text-overflow">{{name}}</dd>
+      </dl>
+      */
+    </script>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0-alpha.1/handlebars.min.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script>
+      (function() {
+
+        /**
+         * Obtains parameters from the hash of the URL
+         * @return Object
+         */
+        function getHashParams() {
+          var hashParams = {};
+          var e, r = /([^&;=]+)=?([^&;]*)/g,
+              q = window.location.hash.substring(1);
+          //console.log("SUBSTRING: " + q);
+          while ( e = r.exec(q)) {
+             hashParams[e[1]] = decodeURIComponent(e[2]);
+          }
+          //Each hashParam is an item from the URL.
+          //console.log(hashParams);
+          return hashParams;
+        }
+
+        //These tie HTML divs to data collected in JSON form via Javascript.
+        var userProfileSource = document.getElementById('user-profile-template').innerHTML,
+            userProfileTemplate = Handlebars.compile(userProfileSource),
+            userProfilePlaceholder = document.getElementById('user-profile');
+
+        var fitbitProfileSource = document.getElementById('fitbit-profile-template').
+          innerHTML,
+            fitbitProfileTemplate = Handlebars.compile(fitbitProfileSource),
+            fitbitProfilePlaceholder = document.getElementById('fitbit-profile');
+
+
+        var listSource = document.getElementById('final-list-template').innerHTML,
+            listTemplate = Handlebars.compile(listSource),
+            listPlaceholder = document.getElementById('final-list');
+
+        /*
+        var oauthSource = document.getElementById('oauth-template').innerHTML,
+            oauthTemplate = Handlebars.compile(oauthSource),
+            oauthPlaceholder = document.getElementById('oauth');
+        */
+
+        /*
+        var artistSource = document.getElementById('artist-template').innerHTML,
+            artistTemplate = Handlebars.compile(artistSource),
+            artistPlaceholder = document.getElementById('artist');
+        */
+
+        //Takes data from the parameters in the URL and stores them in global variables.
+        var params = getHashParams();
+
+        var spotify_access_token = params.spotify_access_token,
+            refresh_token = params.spotify_refresh_token,
+            error = params.error;
+
+        var fitbit_access_token = params.fitbit_access_token,
+            error = params.error;
+
+        var today  = new Date();
+        if (today.getDate() < 9 && (today.getMonth() + 1) < 9) {
+          //Both the month and day require a 0 infront.
+          today = today.getFullYear() + '-0' + (today.getMonth() + 1) + '-0' + today.getDate();
+        } else if (today.getDate() < 9 && (today.getMonth() + 1) > 9) {
+          //Just the day requires a 0 infront.
+          today = today.getFullYear() + '-' + (today.getMonth() + 1) + '-0' + today.getDate();
+        } else if (today.getDate() > 9 && (today.getMonth() + 1) < 9) {
+          //Just the month requires a 0 infront.
+          today = today.getFullYear() + '-0' + (today.getMonth() + 1) + '-' + today.getDate();
+        } else if (today.getDate() > 9 && (today.getMonth() + 1) > 9) {
+          //Neither the day nor the month requires a 0 infront.
+          today = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate();
+        }
+        console.log ("TESTING DATE", today);
+
+        recent_tracks = [];
+        final_list = [];
+
+        //Other global variables.
+        //var testVal = '0OdUWJ0sBjDrqHygGUXeCF';
+
+        if (error) {
+          alert('There was an error during the authentication');
+        } else {
+          //Everthing in this if is based on whether or not the spotify access code
+          //was returned in the URL as something valid.
+          if (spotify_access_token) {
+            //Rendering placeholder information.
+            /*
+            oauthPlaceholder.innerHTML = oauthTemplate({
+              spotify_access_token: spotify_access_token,
+              refresh_token: refresh_token
+            });
+
+            artistPlaceholder.innerHTML = artistTemplate({
+              name: 'test',
+            });
+            */
+
+            //This call updates the Spotify profile information after a redirect occurs.
+            $.ajax({
+                url: 'https://api.spotify.com/v1/me',
+                headers: {
+                  'Authorization': 'Bearer ' + spotify_access_token
+                },
+                success: function(response) {
+                  userProfilePlaceholder.innerHTML = userProfileTemplate(response);
+                  console.log(response);
+                  $('#login').hide();
+                  $('#loggedin').show();
+                }
+            });
+
+            //This call updates the Fitbit profile information after a redirect occurs.
+            if (fitbit_access_token) {
+              $.ajax({
+                url: 'https://api.fitbit.com/1/user/-/profile.json',
+                headers: {
+                  'Authorization': 'Bearer ' + fitbit_access_token
+                },
+                success: function(response) {
+                  //To add more information to be displayed, check out the log in the browser to find out what fields are in the JSON data.
+                  console.log(response['user']);
+                  fitbitProfilePlaceholder.innerHTML = fitbitProfileTemplate(response['user']);
+                }
+              });
+            }
+
+          } else {
+              // Because there is no Spotify access token, return to the initial screen.
+              $('#login').show();
+              $('#loggedin').hide();
+          }
+
+          //Now we list our functions to the backend.
+          /*
+          document.getElementById('obtain-new-token').addEventListener('click', function() {
+            $.ajax({
+              url: '/refresh_token',
+              data: {
+                'refresh_token': refresh_token
+              }
+            }).done(function(data) {
+              spotify_access_token = data.spotify_access_token;
+              
+              oauthPlaceholder.innerHTML = oauthTemplate({
+                spotify_access_token: spotify_access_token,
+                refresh_token: refresh_token
+              });
+            });
+          }, false);
+*/
+
+          //This updates the data stored in testVal with that inputted via "form".
+          /*
+          $( "form" ).submit(function( event ) {
+
+            testVal = $( "input:first" ).val();
+            return;
+ 
+           $( "span" ).text( "Not valid!" ).show().fadeOut( 1000 );
+            event.preventDefault();
+          });*/
+
+          /*
+          document.getElementById('obtain-new-artist').addEventListener('click', function() {
+            $.ajax({
+              url: '/refresh_artist',
+              data: {
+                'refresh_token': refresh_token,
+                'spotify_access_token': spotify_access_token,
+                'spotify_artist_id': testVal
+              }
+            }).done(function(data) {
+              name = data.name;
+              
+              artistPlaceholder.innerHTML = artistTemplate({
+                name: name
+              });
+              
+            });
+          }, false);
+          */
+          
+
+          document.getElementById('obtain-song-tempo').addEventListener('click', function() {
+            //Do a for loop here.
+            //var i = recent_tracks.length;
+            for (var i = 0; i < recent_tracks.length; i++) {
+              //console.log("NEXT TRACK:",recent_tracks[i]);
+              $.ajax({
+                url: '/refresh_tempo',
+                data: {
+                  'refresh_token': refresh_token,
+                  'spotify_access_token': spotify_access_token,
+                  'track': recent_tracks[i]
+                }
+              }).done(function(data) {
+                //Should only add data to the database if it was not drawn from there.
+                console.log(data);
+                if (data.inDatabase == 0) {
+                  //console.log("DATA RECEIVED: ", data["activities-heart"][0].value);
+                  $.ajax({
+                    //Maybe the input to this inner function (data2) could be based on the output from the outer function (data) in order to replace 'today' with the proper date.
+                    url: '/add-to-db',
+                    data: {
+                      'id': data.id,
+                      'name': data.name,
+                      'track_tempo': data.track_tempo
+                    }
+                  }).done(function(data){
+                    console.log("testing done");
+                  });
+                } else {
+                  //Remember, this is going to appear in the browser's log
+                  console.log("Data retrieved from database, so no add required.")
+                }
+              });
+            }
+          }, false);
+
+          document.getElementById('obtain-recent-tracks').addEventListener('click', function() {
+            $.ajax({
+              url: '/refresh_recent_tracks',
+              data: {
+                'refresh_token': refresh_token,
+                'spotify_access_token': spotify_access_token
+              }
+            }).done(function(data) {
+              recent_tracks = data.items;
+              //console.log("TEST", recent_tracks);
+            });
+          }, false);
+
+          document.getElementById('form-list').addEventListener('click', function() {
+            $.ajax({
+              url: '/form_list',
+              data: {
+              }
+            }).done(function(data) {
+              console.log("END LIST", data);
+              for (var i = 0; i < data.length; i++) {
+                uniqueID = 1;
+                for (var j = 0; j < final_list.length; j++) {
+                  if (final_list[j].id == data[i].id) {
+                    uniqueID = 0;
+                  }
+                }
+                if (uniqueID) {
+                  final_list.push(data[i]);
+                }
+              }
+              var final_names = []
+              for (var i = 0; i < final_list.length; i++) {
+                final_names.push(final_list[i].name);
+              }
+              console.log("FINAL LIST", final_names);
+              //console.log("ONE ", final_list[0].name);
+              listPlaceholder.innerHTML = listTemplate({
+                finalList: final_names
+              });
+            });
+          }, false);
+
+          //These functions are dependent on having logged into Fitbit.
+          if (fitbit_access_token) {
+
+            document.getElementById('obtain-heartrate').addEventListener('click', function() {
+              $.ajax({
+                url: '/refresh_heartrate',
+                data: {
+                  'dateTime': today
+                }
+              }).done(function(data) {
+                //Should only add data to the database if it was not drawn from there.
+                if (data.inDatabase == 0) {
+                  //console.log("DATA RECEIVED: ", data["activities-heart"][0].value);
+                  $.ajax({
+                    //Maybe the input to this inner function (data2) could be based on the output from the outer function (data) in order to replace 'today' with the proper date.
+                    url: '/add-to-db',
+                    data: {
+                      'dateTime': data["activities-heart"][0].dateTime,
+                      'value': data["activities-heart"][0].value
+                    }
+                  }).done(function(data){
+                    console.log("testing done");
+                  });
+                } else {
+                  //Remember, this is going to appear in the browser's log
+                  console.log("Data retrieved from database, so no add required.")
+                }
+                console.log(data);
+              /*name = data.name;
+              artistPlaceholder.innerHTML = artistTemplate({
+                name: name
+              });*/
+              });
+            }, false);
+
+          }
+
+        }
+      })();
+    </script>
+  </body>
+</html>
+
