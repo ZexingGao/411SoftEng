@@ -272,8 +272,9 @@
               console.log("FINAL LIST", final_names);
                 let resultingString = "<h4>Here's your playlist!</h4>";
                 for (let i = 0; i < final_names.length; i++){
-                    resultingString += "<p>" + finalList[i] + "<\/p>"
+                    resultingString += "<p>" + final_names[i] + "<\/p>"
                 }
+                console.log(resultingString);
                 document.getElementById("final-list").innerHTML= resultingString;
               // listPlaceholder.innerHTML = listTemplate({
               //   finalList: final_names
