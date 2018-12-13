@@ -1,10 +1,9 @@
  body {
 	background-color: #fbefcc;
-	width: 100%;
-    height: 100%;
-    margin: 0px;
-    padding: 0px;
-
+	/*width: 100%;*/
+    /*height: 100%;*/
+    /*margin: 0px;*/
+    /*padding: 0px;*/
 }
 
 #login, #loggedin {
@@ -62,8 +61,8 @@ div #login {
 }
 
 #loggedin {
-	float: left;
-	margin-left: 10%;
+	/*float: left;*/
+	/*margin-left: 10%;*/
 }
 
 #subtitle, #title{
@@ -71,7 +70,7 @@ div #login {
 }
 
 #title{
-	font-size: 50px;
+	font-size: 30px;
 }
 
 .media-object {
@@ -98,7 +97,7 @@ div #login {
   width: 20%;
   /* adjust the width; make sure the total of both is 100% */
   padding: 0;
-  margin: 0
+  margin: 0;
   font-family:'Questrial', sans-serif;
 }
 
@@ -107,7 +106,7 @@ div #login {
   width: 70%;
   /* adjust the width; make sure the total of both is 100% */
   padding: 0;
-  margin: 0
+  margin: 0;
   font-family:'Questrial', sans-serif;
 }
 
@@ -127,7 +126,7 @@ div #login {
   width: 20%;
   /* adjust the width; make sure the total of both is 100% */
   padding: 0;
-  margin: 0
+  margin: 0;
   font-family:'Questrial', sans-serif;
 }
 .oauth-info dd {
@@ -135,7 +134,7 @@ div #login {
   width: 70%;
   /* adjust the width; make sure the total of both is 100% */
   padding: 0;
-  margin: 0
+  margin: 0;
   font-family:'Questrial', sans-serif;
 }
 
@@ -145,6 +144,14 @@ div #login {
 	font-family:'Questrial', sans-serif;
 }
 
+.button-container{
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    padding-top: 50px;
+    padding-left:250px
+}
+
 .other-button {
   border: 2px solid black;
   border-radius: 10px;
@@ -152,7 +159,7 @@ div #login {
   font-family: 'Lobster',cursive;
   text-decoration: none;
   color:white;
-  background-color: #000099;
+  background-color: darkslateblue;
   transition-duration: 0.4s;
   opacity: 0.6;
 }
@@ -176,6 +183,11 @@ div #login {
 .fitbit-login:hover {
   background-color: #000099;
   color: white;
+}
+
+#final-list{
+    text-align: center;
+    margin: auto;
 }
 
 .scroll-list {

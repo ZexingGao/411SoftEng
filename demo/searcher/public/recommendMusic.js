@@ -1,32 +1,52 @@
-export const setBPM = (bpm)=> {
-    document.getElementById("user-bpm").innherHTML = "bpm";
-};
+let BPM = 0;
 
 let access_token = "";
 let refresh_token = "";
 
-function setTokens(access, refresh){
+function setSpotifyTokens(access, refresh){
+    console.log("tokens", access, refresh)
     access_token = access;
     refresh_token = refresh;
 }
+function setBPM(bpm){
+    console.log("bpm", bpm)
+    BPM = bpm;
+    document.getElementById("user-bpm").innerHTML = BPM + " BPM";
+}
 function recommendMusic() {
-    let playlistID = document.getElementById("playlist-ID").value;
-    let tempo = document.getElementById("tempo").value;
-    console.log("recommendMusic clicked", tempo, playlistID);
-    getPlaylistArtists(playlistID).then((artists) => {
-        console.log("Artists: ", artists);
-        getRelatedArtists(artists).then((relatedArtists)=>{
-            console.log("RELATED ARTISTS", relatedArtists);
-            getRecommendedSongs(relatedArtists).then((recommendedSongs)=>{
-                console.log("REC SONGS:", recommendedSongs);
-                performSongAnalysis(recommendedSongs, tempo).then((result)=> {
-                    document.getElementById("recommend-music-results").innerHTML = result;
+   document.getElementById("user-bpm").innherHTML = BPM;
+    let tempo = parseInt(BPM);
+    getRandomPlaylist().then((playlistID)=>{
+        console.log("playlist id: ", playlistID);
+        getPlaylistArtists(playlistID).then((artists) => {
+            console.log("Artists: ", artists);
+            getRelatedArtists(artists).then((relatedArtists)=>{
+                console.log("RELATED ARTISTS", relatedArtists);
+                getRecommendedSongs(relatedArtists).then((recommendedSongs)=>{
+                    console.log("REC SONGS:", recommendedSongs);
+                    performSongAnalysis(recommendedSongs, tempo).then((result)=> {
+                        console.log(result)
+                        document.getElementById("final-list").innerHTML = result;
+                    })
                 })
             })
-        })
+        });
     });
-}
 
+}
+function getRandomPlaylist(){
+    return new Promise((resolve, reject) => {
+        $.ajax({
+            url: '/get_random_playlist',
+            data: {
+                'refresh_token': refresh_token,
+                'access_token': access_token
+            }
+        }).done(function(data) {
+            resolve(data);
+        });
+    })
+}
 function performSongAnalysis(recommendedSongs, tempo){
     return new Promise((resolve, reject) => {
         $.ajax({
@@ -86,3 +106,4 @@ function getPlaylistArtists(playlistID){
         });
     })
 }
+

@@ -1,67 +1,60 @@
 <!doctype html>
 <html>
   <head>
-    <title>HeartBeats</title>
-    <link rel="stylesheet" type="text/css" href="index.css">
-    <link href="https://fonts.googleapis.com/css?family=Courgette|Lobster|Questrial" rel="stylesheet">
-    <!--
-    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css"> 
-  -->
+        <title>HeartBeats</title>
+        <link rel="stylesheet" type="text/css" href="index.css">
+        <script src = "recommendMusic.js"></script>
+        <link href="https://fonts.googleapis.com/css?family=Courgette|Lobster|Questrial" rel="stylesheet">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
   </head>
 
   <body>
     <div class="container">
-      <div id="login">
-        <video autoplay muted loop id="myVideo">
-          <source src="Matkot.mp4" type="video/mp4">
-          <source src="Matkot.webm" type="video/webm">
-        </video>
-        <br>
-        <br>
-        <br>
-        <br>
-        <h1 id="login-title">HeartBeats</h1>
-        <h3 id="login-title2">Listen to what your heart truly wants</h3>
-        <br>
-        <a id="Spotify" href="/login" class="btn btn-primary">Log in with Spotify</a>
-      </div>
-      <div id="loggedin">
-        <div id="user-profile">
+        <div id="login">
+            <video autoplay muted loop id="myVideo">
+                <source src="Matkot.mp4" type="video/mp4">
+                <source src="Matkot.webm" type="video/webm">
+            </video>
+            <br>
+            <br>
+            <br>
+            <br>
+            <h1 id="login-title">HeartBeats</h1>
+            <h3 id="login-title2">Listen to what your heart truly wants</h3>
+            <br>
+            <a id="Spotify" href="/login" class="btn btn-primary">Log in with Spotify</a>
         </div>
-        <!--
-        <div id="oauth">
-        </div>
-        -->
+        <div id="loggedin">
+            <nav class="navbar navbar-light bg-light static-top">
+                <div class="container">
+                    <div  class="navbar-brand"  id="user-profile"></div>
+                    <br>
+                    <br>
+                    <br>
+                    <br>
+                    <br>
+                    <div id ="fitbit-profile"></div>
+                </div>
+            </nav>
+            <div style ="height: 200px;  background-color: darkslateblue">
+                <h1 id ="user-bpm" style = "color: white; font-size: 72px; text-align: center; padding-top:60px">0 BPM</h1>
+            </div>
 
-        <!--
-        <button class="btn btn-default" id="obtain-new-token">Obtain new token using the refresh token</button>
-
-      -->
-        <!--
-        <form>
-          <input type="text" id="myInput" value="0OdUWJ0sBjDrqHygGUXeCF">
-        </form>
-        <button class="btn btn-default" id="obtain-new-artist">Search</button>
-      -->
-        <a href="/login-fitbit" class="fitbit-login">0. Log in with Fitbit</a>
-        <button class="other-button" id="obtain-heartrate">1. Search Heartrate</button>
-        <button class="other-button" id="obtain-recent-tracks">2. Search Recent Tracks</button>
-        <button class="other-button" id="obtain-song-tempo">3. Search Tempo</button>
-        <button class="other-button" id="form-list">4. Form List</button>
-        <div id ="fitbit-profile">
+            <div style = "padding-left: 220px; padding-top: 50px">
+                <a href="/login-fitbit" class="fitbit-login">0. Log in with Fitbit</a>
+                <button class="other-button" id="obtain-heartrate">1. Search Heartrate</button>
+                <button class="other-button" id="obtain-recent-tracks">2. Search Recent Tracks</button>
+                <button class="other-button" id="obtain-song-tempo">3. Search Tempo</button>
+                <button class="other-button" id="form-list">4. Form List</button>
+                <button class="other-button" id="get-recommendation" onclick="recommendMusic()" >Get Recommendations!</button>
+             </div>
+            <div id="final-list"></div>
         </div>
-        <div id="final-list">
-        </div>
-      </div>
     </div>
 
     <script id="user-profile-template" type="text/x-handlebars-template">
-      <h1 id="title">HeartBeats</h1>
-      <h2 id="subtitle">Welcome to HeatBeats, {{display_name}}</h2>
-      <div class="guide">
-      To get started, log into your Fitbit account and retrieve your heartrate.
-      </div>
-      <br>
+        <h2 style = "left:0; " id="subtitle">Welcome to HeatBeats, {{display_name}}</h2>
+        <p>To get started, log into your Fitbit account and retrieve your heartrate.</p>
     </script>
 
     <script id="fitbit-profile-template" type="text/x-handlebars-template">
@@ -69,13 +62,11 @@
     </script>
 
     <script id="final-list-template" type="text/x-handlebars-template">
-    <div class="guide">Song List</div>
-    <div class="scroll-list">
-      {{finalList}}
-    </div>
+    <!--<div class="guide">Song List</div>-->
+    <!--<div class="final-list">-->
+      <!--{{finalList}}-->
+    <!--</div>-->
     </script>
-
-
 
     <script id="oauth-template" type="text/x-handlebars-template">
     /*
@@ -133,24 +124,13 @@
             listTemplate = Handlebars.compile(listSource),
             listPlaceholder = document.getElementById('final-list');
 
-        /*
-        var oauthSource = document.getElementById('oauth-template').innerHTML,
-            oauthTemplate = Handlebars.compile(oauthSource),
-            oauthPlaceholder = document.getElementById('oauth');
-        */
-
-        /*
-        var artistSource = document.getElementById('artist-template').innerHTML,
-            artistTemplate = Handlebars.compile(artistSource),
-            artistPlaceholder = document.getElementById('artist');
-        */
-
         //Takes data from the parameters in the URL and stores them in global variables.
         var params = getHashParams();
 
         var spotify_access_token = params.spotify_access_token,
             refresh_token = params.spotify_refresh_token,
             error = params.error;
+        setSpotifyTokens(spotify_access_token, refresh_token);
 
         var fitbit_access_token = params.fitbit_access_token,
             error = params.error;
@@ -183,18 +163,6 @@
           //Everthing in this if is based on whether or not the spotify access code
           //was returned in the URL as something valid.
           if (spotify_access_token) {
-            //Rendering placeholder information.
-            /*
-            oauthPlaceholder.innerHTML = oauthTemplate({
-              spotify_access_token: spotify_access_token,
-              refresh_token: refresh_token
-            });
-
-            artistPlaceholder.innerHTML = artistTemplate({
-              name: 'test',
-            });
-            */
-
             //This call updates the Spotify profile information after a redirect occurs.
             $.ajax({
                 url: 'https://api.spotify.com/v1/me',
@@ -229,57 +197,6 @@
               $('#login').show();
               $('#loggedin').hide();
           }
-
-          //Now we list our functions to the backend.
-          /*
-          document.getElementById('obtain-new-token').addEventListener('click', function() {
-            $.ajax({
-              url: '/refresh_token',
-              data: {
-                'refresh_token': refresh_token
-              }
-            }).done(function(data) {
-              spotify_access_token = data.spotify_access_token;
-              
-              oauthPlaceholder.innerHTML = oauthTemplate({
-                spotify_access_token: spotify_access_token,
-                refresh_token: refresh_token
-              });
-            });
-          }, false);
-*/
-
-          //This updates the data stored in testVal with that inputted via "form".
-          /*
-          $( "form" ).submit(function( event ) {
-
-            testVal = $( "input:first" ).val();
-            return;
- 
-           $( "span" ).text( "Not valid!" ).show().fadeOut( 1000 );
-            event.preventDefault();
-          });*/
-
-          /*
-          document.getElementById('obtain-new-artist').addEventListener('click', function() {
-            $.ajax({
-              url: '/refresh_artist',
-              data: {
-                'refresh_token': refresh_token,
-                'spotify_access_token': spotify_access_token,
-                'spotify_artist_id': testVal
-              }
-            }).done(function(data) {
-              name = data.name;
-              
-              artistPlaceholder.innerHTML = artistTemplate({
-                name: name
-              });
-              
-            });
-          }, false);
-          */
-          
 
           document.getElementById('obtain-song-tempo').addEventListener('click', function() {
             //Do a for loop here.
@@ -353,10 +270,14 @@
                 final_names.push(final_list[i].name);
               }
               console.log("FINAL LIST", final_names);
-              //console.log("ONE ", final_list[0].name);
-              listPlaceholder.innerHTML = listTemplate({
-                finalList: final_names
-              });
+                let resultingString = "<h4>Here's your playlist!</h4>";
+                for (let i = 0; i < final_names.length; i++){
+                    resultingString += "<p>" + finalList[i] + "<\/p>"
+                }
+                document.getElementById("final-list").innerHTML= resultingString;
+              // listPlaceholder.innerHTML = listTemplate({
+              //   finalList: final_names
+              // });
             });
           }, false);
 
@@ -364,12 +285,15 @@
           if (fitbit_access_token) {
 
             document.getElementById('obtain-heartrate').addEventListener('click', function() {
+                // updateDocumentBPM();
               $.ajax({
                 url: '/refresh_heartrate',
                 data: {
                   'dateTime': today
                 }
               }).done(function(data) {
+                  console.log("*********  check dis out", data);
+                  setBPM(data[0]["value"]["heartRateZones"][2]["max"]);
                 //Should only add data to the database if it was not drawn from there.
                 if (data.inDatabase == 0) {
                   //console.log("DATA RECEIVED: ", data["activities-heart"][0].value);
@@ -388,15 +312,10 @@
                   console.log("Data retrieved from database, so no add required.")
                 }
                 console.log(data);
-              /*name = data.name;
-              artistPlaceholder.innerHTML = artistTemplate({
-                name: name
-              });*/
               });
             }, false);
 
           }
-
         }
       })();
     </script>
