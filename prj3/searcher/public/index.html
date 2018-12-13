@@ -3,7 +3,9 @@
   <head>
     <title>Spotify Searcher</title>
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
-    <style type="text/css">
+    <script src = "./../recommendMusic.js"></script>
+
+      <style type="text/css">
       #login, #loggedin {
         display: none;
       }
@@ -134,6 +136,7 @@
         var spotify_access_token = params.spotify_access_token,
             refresh_token = params.spotify_refresh_token,
             error = params.error;
+          setTokens(spotify_access_token, refresh_token);
 
         var fitbit_access_token = params.fitbit_access_token,
             error = params.error;

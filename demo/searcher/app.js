@@ -12,7 +12,6 @@ var mongoURL = "mongodb://localhost:27017/";
 //Spotify sensitive information
 var spotify_client_id = process.env['CLIENT_ID'];
 var spotify_client_secret = process.env['CLIENT_SECRET'];
-
 //Fitbit sensitive information
 var fitbit_client_id = process.env['FITBIT_CLIENT_ID'];
 var fitbit_client_secret = process.env['FITBIT_CLIENT_SECRET'];
@@ -29,7 +28,7 @@ var client = new FitbitApiClient({
   clientId: fitbit_client_id,
   clientSecret: fitbit_client_secret,
   apiVersion: '1.2'
-})
+});
 
 var today  = new Date();
 if (today.getDate() < 9 && (today.getMonth() + 1) < 9) {
@@ -59,11 +58,17 @@ var generateRandomString = function(length) {
     text += possible.charAt(Math.floor(Math.random() * possible.length));
   }
   return text;
-};
+};//
 
 var stateKey = 'spotify_auth_state';
 
-var app = express();
+var app = express(); //
+
+// var socket = io.connect('http://localhost');
+// socket.on('set-bpm', function (bpm) {
+//     console.log(bpm);
+//     document.getElementById("user-bpm").innerHTML = bpm;
+// });
 
 app.use(express.static(__dirname + '/public'))
    .use(cors())
@@ -76,7 +81,7 @@ app.get('/login', function(req, res) {
   res.cookie(stateKey, state);
 
   // your application requests authorization
-  var scope = 'user-read-private user-read-email user-read-recently-played';
+  var scope = 'user-read-private user-read-email user-read-recently-played playlist-read-private playlist-read-collaborative';
   res.redirect('https://accounts.spotify.com/authorize?' +
     querystring.stringify({
       response_type: 'code',
@@ -85,6 +90,162 @@ app.get('/login', function(req, res) {
       redirect_uri: redirect_uri,
       state: state
     }));
+});
+app.get('/get_artists', function(req, res) {
+    var access_token = req.query.access_token;
+    var authOptions = {
+        url: 'https://api.spotify.com/v1/playlists/'+ req.query.playlist_ID + '/tracks',
+        headers: { 'Authorization': 'Bearer ' + access_token },
+        json: true
+    };
+
+    request.get(authOptions, function(error, response, body) {
+        console.log(body);
+        if (!error && response.statusCode === 200) {
+            let artistIDs= [];
+            let items = body.items ;
+            for (let i =0; i < items.length; i++){
+                artistIDs.push(items[i].track.artists[0].id);
+            }
+            let filteredArray = artistIDs.filter(function(item, pos) {
+                return artistIDs.indexOf(item) === pos; //removes duplicates
+            });
+            res.send(filteredArray);
+        }
+    });
+});
+app.get('/get_random_playlist', function(req, res) {
+    var access_token = req.query.access_token;
+    var authOptions = {
+        url: 'https://api.spotify.com/v1/me/playlists',
+        headers: { 'Authorization': 'Bearer ' + access_token },
+        json: true
+    };
+
+    request.get(authOptions, function(error, response, body) {
+        console.log(body);
+        if (!error && response.statusCode === 200) {
+            let items = body.items ;
+            let playlistObj = items[Math.floor(Math.random()*items.length)];
+            res.send(playlistObj.id);
+        }
+    });
+});
+
+app.get('/get_related_artists', function(req, res) {
+    var access_token = req.query.access_token;
+
+    let relatedArtists = [];
+    let finished =0;
+    for (let i = 0; i < req.query.artists.length; i++){
+        var authOptions = {
+            url: 'https://api.spotify.com/v1/artists/'+ req.query.artists[i]+ '/related-artists',
+            headers: { 'Authorization': 'Bearer ' + access_token },
+            json: true
+        };
+        request.get(authOptions, function(error, response, body) {
+            let recommendedArtists = body.artists;
+            if (!error && response.statusCode === 200) {
+                for (let j =0; j < Math.min(4, recommendedArtists.length); j++){
+                    relatedArtists.push([recommendedArtists[j].id, recommendedArtists[j].name])
+                }
+                finished +=1
+            }
+        });
+    }//
+    function waitUntilFinished() {
+        if(finished < req.query.artists.length) {
+            setTimeout(waitUntilFinished, 100);
+        } else {
+            let filteredArray = relatedArtists.filter(function(item, pos) {
+                return relatedArtists.indexOf(item) === pos; //removes duplicates
+            });
+            res.send(filteredArray)
+        }
+    }
+    waitUntilFinished();
+});
+
+app.get('/get_recommended_songs', function(req, res) {
+    var access_token = req.query.access_token;
+
+    let recommendedSongs = [];
+    let finished =0;
+    for (let i = 0; i < req.query.relatedArtists.length; i++){
+        let currentArtist = req.query.relatedArtists[i];
+        var authOptions = {
+            url: 'https://api.spotify.com/v1/artists/'+ currentArtist[0]+ '/top-tracks?market=US',
+            headers: { 'Authorization': 'Bearer ' + access_token },
+            json: true
+        };
+        request.get(authOptions, function(error, response, body) {
+            let tracks = body.tracks;
+            if (!error && response.statusCode === 200) {
+                for (let j =0; j < Math.min(4, tracks.length); j++){
+                    let currID = tracks[j].id;
+                    let trackName = tracks[j].name;
+                    let obj = {};
+                    // console.log("artists name ", currentArtist[1])
+                    obj[currID] = [currentArtist[1], trackName];
+                    recommendedSongs.push(obj)
+                }
+                finished +=1
+            }
+        });
+    }
+
+    function waitUntilFinished() {
+        if(finished < req.query.relatedArtists.length) {
+            setTimeout(waitUntilFinished, 100);
+        } else {
+            let filteredArray = recommendedSongs.filter(function(item, pos) {
+                return recommendedSongs.indexOf(item) === pos; //removes duplicates
+            });
+            res.send(filteredArray)
+        }
+    }
+    waitUntilFinished();
+});
+
+app.get('/perform_song_analysis', function(req, res) {
+    var access_token = req.query.access_token;
+
+    let result = [];
+    let finished =0;
+    let songObjectsList = Object.entries(req.query.recommendedSongs);
+    for (let i = 0; i < songObjectsList.length; i++){
+        let currentSongObject = songObjectsList[i][1];
+        let key = Object.keys(currentSongObject)[0]; //holds the song id
+        var authOptions = {
+            url: 'https://api.spotify.com/v1/audio-features/'+ key,
+            headers: { 'Authorization': 'Bearer ' + access_token },
+            json: true
+        };//
+        request.get(authOptions, function(error, response, body) {
+            let tempo = body.tempo; //
+            if (!error && response.statusCode === 200) {
+                if (parseInt(req.query.tempo) - 10 >=  tempo <= parseInt(req.query.tempo) + 10){
+                    result.push(currentSongObject)
+                }
+                finished +=1
+            }
+        });
+    }
+
+    function waitUntilFinished() {
+        if(finished < songObjectsList.length) {
+            setTimeout(waitUntilFinished, 100);
+        } else {
+            let resultingString = "<h4>Check out these songs!!<\/h4>";
+            for (let i =0; i < result.length; i ++){
+                let songObj = result[i];
+                let currKey = Object.keys(songObj)[0];
+                resultingString += "<p>"+ songObj[currKey][1] + " by " + songObj[currKey][0] + "<\/p>"
+            }
+            res.send(resultingString)
+        }
+    }
+    waitUntilFinished();
 });
 
 app.get('/login-fitbit', function(req, res) {
@@ -144,19 +305,6 @@ app.get('/callback', function(req, res) {
 
           spotify_access_token = body.access_token;
           spotify_refresh_token = body.refresh_token;
-
-          //Displays the authorization code in the terminal.
-          /*
-          var options = {
-            url: 'https://api.spotify.com/v1/me',
-            headers: { 'Authorization': 'Bearer ' + spotify_access_token },
-            json: true
-          };
-
-          // use the access token to access the Spotify Web API
-          request.get(options, function(error, response, body) {
-            console.log(body);
-          });*/
 
           // We can also pass the token to the browser to make requests from there. (I.e. place the token in the URL.)
           // Notice, we won't have the Fitbit access token at this point. Only two variables should be included in the URL.
@@ -448,11 +596,7 @@ app.get('/refresh_heartrate', async function(req, res) {
   if (databaseResult.length == 0) {
     //The format of this is going to be a single item in a list followed by 'IncomingMessage.' Hence we get the first item.
     client.get('/activities/heart/date/' + today + '/1d.json', fitbit_access_token).then(results => {
-      //var testing = insertDatabase(urlQuery, results);
-      //console.log(results[0]);
-      //console.log(results[0]['activities-heart'][0]['value']);
       results[0]['inDatabase'] = 0;
-      console.log("DATABASE RESULT:", results[0]);
       res.send(results[0]);
     }).catch(err => {
       res.status(err.status).send(err);
@@ -461,7 +605,6 @@ app.get('/refresh_heartrate', async function(req, res) {
     //Else, the information is in the database. Send the result back to the front end.
     console.log("Exists in database already.");
     databaseResult['inDatabase'] = 1;
-    console.log("DATABASE RESULT:", databaseResult);
     res.send(databaseResult);
   }
   
