@@ -1,7 +1,7 @@
 # 411SoftEng
 This is a team repo for a CS 411 Team Project
 
-Section A2, Team 2: Jade Sessions, Zexing Gao, Boxi Huang, Keith Lovett
+Section A2, Team 2: Boxi Huang, Jade Sessions, Zexing Gao, Keith Lovett
 
 ## Heart-Rate-based Music Selection ##
 ### Database: store user information, including personal playlist, recommendation list, etc. ###
